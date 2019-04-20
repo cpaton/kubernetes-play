@@ -1,0 +1,62 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: jenkins-master-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: ""
+  selector:
+    matchLabels:
+      app: jenkins
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: jenkins-master-deployment
+  labels:
+    app: jenkins
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      name: jenkins-master
+      labels:
+        app: jenkins
+        role: master
+    spec:
+      containers:
+      - name: jenkins-master
+        image: jenkins/jenkins
+        volumeMounts:
+        - mountPath: "/var/jenkins_home"
+          name: jenkins-master-volume
+        ports:
+        - containerPort: 8080
+        - containerPort: 50000
+      volumes:
+      - name: jenkins-master-volume
+        persistentVolumeClaim:
+          claimName: jenkins-master-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: jenkins-master-service
+spec:
+  selector:
+    app: jenkins
+    role: master
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: NodePort
